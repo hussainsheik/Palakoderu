@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Household Survey Dashboard - Palakoderu, West Godavari</title>
+    
+    <!-- Leaflet CSS for map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
+    
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+        h1 { text-align: center; }
+        #dashboard { text-align: center; margin: 20px; font-size: 1.2em; }
+        #map { height: 500px; width: 100%; margin-bottom: 30px; }
+        #table-container { width: 100%; overflow-x: auto; }
+        table { width: 100%; }
+    </style>
+</head>
+<body>
+    <h1>Household Survey Dashboard</h1>
+    <div id="dashboard">
+        <p><strong>Total Households:</strong> <span id="total-count">Loading...</span></p>
+        <p>Data source: Palakoderu, West Godavari (Survey Status mostly "Not Completed")</p>
+    </div>
+    
+    <div id="map"></div>
+    
+    <h2>Data Table (Searchable)</h2>
+    <div id="table-container">
+        <table id="dataTable" class="display">
+            <thead>
+                <tr>
+                    <th>Household ID</th>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Mobile</th>
+                    <th>Longitude</th>
+                    <th>Latitude</th>
+                    <th>Survey Status</th>
+                    <th>DOB</th>
+                    <th>Age</th>
+                    <th>Age Flag</th>
+                    <th>Cluster ID</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIkAQDImTQezGnyH3mlW1svR4HOym0q31In7WwAdNow-Zyho0jQ1cyFQ4VwGZXdM29S6J15O5jKAaJ/pub?output=csv';
+        
+        let dataTable;
+        let map;
+        
+        // Initialize map centered on approximate area (Palakoderu, West Godavari ~16.55, 81.59)
+        function initMap() {
+            map = L.map('map').setView([16.55, 81.59], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+        }
+        
+        // Fetch and process CSV
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                const data = results.data;
+                
+                // Update total count
+                document.getElementById('total-count').textContent = data.length;
+                
+                // Populate DataTable
+                if ($.fn.DataTable.isDataTable('#dataTable')) {
+                    dataTable.destroy();
+                }
+                dataTable = $('#dataTable').DataTable({
+                    data: data,
+                    columns: [
+                        { data: 'HOUSEHOLDID' },
+                        { data: 'CITIZEN_NAME' },
+                        { data: 'ADDRESS' },
+                        { data: 'MOBILE_NUMBER' },
+                        { data: 'HH_LONGITUDE' },
+                        { data: 'HH_LATITUDE' },
+                        { data: 'SURVEY_STATUS' },
+                        { data: 'DOB_DT' },
+                        { data: 'AGE_IN_YEARS' },
+                        { data: 'AGE_FLAG' },
+                        { data: 'CLUSTER_ID' }
+                    ],
+                    pageLength: 10,
+                    order: [[0, 'asc']]
+                });
+                
+                // Add markers to map
+                data.forEach(row => {
+                    const lat = parseFloat(row.HH_LATITUDE);
+                    const lon = parseFloat(row.HH_LONGITUDE);
+                    if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
+                        const popupContent = `
+                            <b>Name:</b> ${row.CITIZEN_NAME || 'N/A'}<br>
+                            <b>Address:</b> ${row.ADDRESS || 'N/A'}<br>
+                            <b>Age:</b> \( {row.AGE_IN_YEARS || 'N/A'} ( \){row.AGE_FLAG || ''})<br>
+                            <b>Mobile:</b> ${row.MOBILE_NUMBER || 'N/A'}<br>
+                            <b>Survey Status:</b> ${row.SURVEY_STATUS || 'N/A'}
+                        `;
+                        L.marker([lat, lon]).addTo(map)
+                            .bindPopup(popupContent);
+                    }
+                });
+                
+                // Fit map to markers if any
+                if (map.getBounds().isValid()) {
+                    map.fitBounds(map.getBounds().pad(0.1));
+                }
+            },
+            error: function(err) {
+                alert('Error loading data: ' + err);
+            }
+        });
+        
+        // Initialize map on load
+        initMap();
+    </script>
+</body>
+</html>
