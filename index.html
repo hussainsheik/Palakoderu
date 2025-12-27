@@ -67,7 +67,7 @@
                 <div id="map"></div>
             </div>
             <div class="card-footer text-muted small">
-                Click on markers to view household details
+                Click on markers/clusters to view household details
             </div>
         </div>
 
@@ -101,9 +101,9 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <script>
-        const csvUrl = 'https://corsproxy.io/?' + encodeURIComponent(
-            'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIkAQDImTQezGnyH3mlW1svR4HOym0q31In7WwAdNow-Zyho0jQ1cyFQ4VwGZXdM29S6J15O5jKAaJ/pub?output=csv'
-        );
+        // Updated reliable proxy
+        const originalCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIkAQDImTQezGnyH3mlW1svR4HOym0q31In7WwAdNow-Zyho0jQ1cyFQ4VwGZXdM29S6J15O5jKAaJ/pub?output=csv';
+        const csvUrl = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(originalCsvUrl);
 
         let map, markerCluster;
 
@@ -128,7 +128,7 @@
 
                     // Update dashboard stats
                     const total = data.length;
-                    const completed = data.filter(r => r.SURVEY_STATUS === 'Completed').length;
+                    const completed = data.filter(r => r.SURVEY_STATUS && r.SURVEY_STATUS.trim() === 'Completed').length;
                     const notCompleted = total - completed;
                     const withGps = data.filter(r => {
                         const lat = parseFloat(r.HH_LATITUDE);
@@ -146,7 +146,7 @@
                         const lat = parseFloat(row.HH_LATITUDE);
                         const lon = parseFloat(row.HH_LONGITUDE);
                         if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
-                            const statusColor = row.SURVEY_STATUS === 'Completed' ? 'green' : 'red';
+                            const statusColor = (row.SURVEY_STATUS && row.SURVEY_STATUS.trim() === 'Completed') ? 'green' : 'red';
                             const popup = `
                                 <div class="p-2">
                                     <b>Name:</b> ${row.CITIZEN_NAME || 'N/A'}<br>
@@ -180,7 +180,7 @@
                     });
                 },
                 error: function(err) {
-                    alert('Failed to load data. Please try again or check internet connection.');
+                    alert('Still failed to load data. Check your internet or try opening the file via a local web server (recommended for reliability).');
                     console.error(err);
                 }
             });
