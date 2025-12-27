@@ -3,188 +3,283 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Household Survey Dashboard - Palakoderu</title>
+    <title>Palakoderu Household Survey • Beautiful Dashboard</title>
 
-    <!-- Bootstrap 5 CSS -->
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Leaflet CSS -->
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- DataTables CSS (with Bootstrap styling) -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
-    
-    <!-- Leaflet MarkerCluster -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        body { background-color: #f8f9fa; padding-top: 20px; }
-        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        #map { height: 500px; border-radius: 12px; overflow: hidden; }
-        .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h1 { font-weight: 700; color: #2c3e50; }
-        .stat-card h3 { font-size: 2.5rem; font-weight: bold; }
-        .stat-card .text-muted { font-size: 1.1rem; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #e0e0e0;
+            min-height: 100vh;
+            margin: 0;
+            padding-bottom: 50px;
+        }
+        .header-gradient {
+            background: linear-gradient(120deg, #00b4db, #0083b0);
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 0 0 30px 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            animation: gradientShift 15s ease infinite;
+            background-size: 400% 400%;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        h1 { font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .subtitle { font-size: 1.2rem; color: rgba(255,255,255,0.9); margin-top: 10px; }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.4s ease;
+            overflow: hidden;
+        }
+        .stat-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        #map {
+            height: 600px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        }
+
+        .table-container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        }
+
+        .loading-spinner {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 1s ease forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="text-center mb-4">Household Survey Dashboard</h1>
-        <p class="text-center text-muted mb-5">Palakoderu Village, West Godavari District, Andhra Pradesh</p>
 
-        <!-- Dashboard Cards -->
-        <div class="row mb-4 g-4">
-            <div class="col-md-3 col-6">
-                <div class="card stat-card text-center p-4 bg-primary text-white">
-                    <h3 id="total">0</h3>
-                    <p class="text-white-50 mb-0">Total Households</p>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="card stat-card text-center p-4 bg-success text-white">
-                    <h3 id="completed">0</h3>
-                    <p class="text-white-50 mb-0">Surveys Completed</p>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="card stat-card text-center p-4 bg-warning text-white">
-                    <h3 id="notcompleted">0</h3>
-                    <p class="text-white-50 mb-0">Not Completed</p>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="card stat-card text-center p-4 bg-info text-white">
-                    <h3 id="withgps">0</h3>
-                    <p class="text-white-50 mb-0">With GPS Location</p>
-                </div>
+<div class="loading-spinner text-center text-white">
+    <div class="spinner-border" style="width: 4rem; height: 4rem;" role="status"></div>
+    <p class="mt-3 fs-4">Loading beautiful dashboard...</p>
+</div>
+
+<div class="header-gradient">
+    <h1>Palakoderu Household Survey</h1>
+    <p class="subtitle">West Godavari District • Andhra Pradesh</p>
+</div>
+
+<div class="container my-5 fade-in">
+    <div class="row g-4 mb-5">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card text-center p-4 text-primary">
+                <div class="stat-number" id="total">0</div>
+                <p class="fs-5 mb-0">Total Households</p>
             </div>
         </div>
-
-        <!-- Map -->
-        <div class="card mb-4">
-            <div class="card-body p-0">
-                <div id="map"></div>
-            </div>
-            <div class="card-footer text-muted small">
-                Click on markers/clusters to view household details
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card text-center p-4 text-success">
+                <div class="stat-number" id="completed">0</div>
+                <p class="fs-5 mb-0">Surveys Completed</p>
             </div>
         </div>
-
-        <!-- Data Table -->
-        <div class="table-container mb-5">
-            <h3 class="mb-4">Household Data Table</h3>
-            <table id="dataTable" class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Household ID</th>
-                        <th>Name</th>
-                        <th>Address</th>
-                        <th>Mobile</th>
-                        <th>Age</th>
-                        <th>Survey Status</th>
-                        <th>Cluster ID</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card text-center p-4 text-warning">
+                <div class="stat-number" id="notcompleted">0</div>
+                <p class="fs-5 mb-0">Not Completed</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card text-center p-4 text-info">
+                <div class="stat-number" id="withgps">0</div>
+                <p class="fs-5 mb-0">With GPS Location</p>
+            </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <div class="mb-5 fade-in">
+        <div id="map"></div>
+        <div class="text-center mt-3 text-muted small">
+            🌍 Click clusters or markers to explore households • Green = Completed, Red = Not Completed
+        </div>
+    </div>
 
-    <script>
-        // Updated reliable proxy
-        const originalCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIkAQDImTQezGnyH3mlW1svR4HOym0q31In7WwAdNow-Zyho0jQ1cyFQ4VwGZXdM29S6J15O5jKAaJ/pub?output=csv';
-        const csvUrl = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(originalCsvUrl);
+    <div class="table-container fade-in">
+        <h3 class="text-center mb-4 text-white">Household Details Table</h3>
+        <table id="dataTable" class="table table-striped table-hover text-white">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Mobile</th>
+                    <th>Age</th>
+                    <th>Status</th>
+                    <th>Cluster</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
 
-        let map, markerCluster;
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
-        function initMap() {
-            map = L.map('map').setView([16.55, 81.59], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
+<script>
+    const originalUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIkAQDImTQezGnyH3mlW1svR4HOym0q31In7WwAdNow-Zyho0jQ1cyFQ4VwGZXdM29S6J15O5jKAaJ/pub?output=csv';
+    const csvUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(originalUrl);
 
-            markerCluster = L.markerClusterGroup();
-            map.addLayer(markerCluster);
-        }
+    let map, markerCluster;
 
-        $(document).ready(function() {
-            initMap();
+    function initMap() {
+        map = L.map('map').setView([16.55, 81.59], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
-            Papa.parse(csvUrl, {
-                download: true,
-                header: true,
-                complete: function(results) {
-                    const data = results.data.filter(row => row.HOUSEHOLDID); // Remove empty rows
-
-                    // Update dashboard stats
-                    const total = data.length;
-                    const completed = data.filter(r => r.SURVEY_STATUS && r.SURVEY_STATUS.trim() === 'Completed').length;
-                    const notCompleted = total - completed;
-                    const withGps = data.filter(r => {
-                        const lat = parseFloat(r.HH_LATITUDE);
-                        const lon = parseFloat(r.HH_LONGITUDE);
-                        return !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
-                    }).length;
-
-                    $('#total').text(total);
-                    $('#completed').text(completed);
-                    $('#notcompleted').text(notCompleted);
-                    $('#withgps').text(withGps);
-
-                    // Add markers
-                    data.forEach(row => {
-                        const lat = parseFloat(row.HH_LATITUDE);
-                        const lon = parseFloat(row.HH_LONGITUDE);
-                        if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
-                            const statusColor = (row.SURVEY_STATUS && row.SURVEY_STATUS.trim() === 'Completed') ? 'green' : 'red';
-                            const popup = `
-                                <div class="p-2">
-                                    <b>Name:</b> ${row.CITIZEN_NAME || 'N/A'}<br>
-                                    <b>Address:</b> ${row.ADDRESS || 'N/A'}<br>
-                                    <b>Mobile:</b> ${row.MOBILE_NUMBER || 'N/A'}<br>
-                                    <b>Age:</b> \( {row.AGE_IN_YEARS || 'N/A'} ( \){row.AGE_FLAG || ''})<br>
-                                    <b><span style="color:${statusColor};font-weight:bold;">Status:</span></b> ${row.SURVEY_STATUS || 'N/A'}
-                                </div>`;
-                            const marker = L.marker([lat, lon]).bindPopup(popup);
-                            markerCluster.addLayer(marker);
-                        }
-                    });
-
-                    if (withGps > 0) map.fitBounds(markerCluster.getBounds(), { padding: [50, 50] });
-
-                    // Initialize DataTable
-                    $('#dataTable').DataTable({
-                        data: data,
-                        pageLength: 15,
-                        responsive: true,
-                        columns: [
-                            { data: 'HOUSEHOLDID' },
-                            { data: 'CITIZEN_NAME' },
-                            { data: 'ADDRESS' },
-                            { data: 'MOBILE_NUMBER' },
-                            { data: 'AGE_IN_YEARS' },
-                            { data: 'SURVEY_STATUS' },
-                            { data: 'CLUSTER_ID' }
-                        ],
-                        order: [[0, 'asc']]
-                    });
-                },
-                error: function(err) {
-                    alert('Still failed to load data. Check your internet or try opening the file via a local web server (recommended for reliability).');
-                    console.error(err);
-                }
-            });
+        markerCluster = L.markerClusterGroup({
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true
         });
-    </script>
+        map.addLayer(markerCluster);
+    }
+
+    // Count-up animation for stats
+    function animateCount(element, target) {
+        let count = 0;
+        const increment = target / 50;
+        const timer = setInterval(() => {
+            count += increment;
+            if (count >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(count);
+            }
+        }, 40);
+    }
+
+    $(document).ready(function() {
+        initMap();
+
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                $('.loading-spinner').fadeOut(500);
+                $('.fade-in').each(function(i) {
+                    $(this).delay(i * 300).queue(function() { $(this).addClass('animated'); $(this).dequeue(); });
+                });
+
+                const data = results.data.filter(row => row.HOUSEHOLDID);
+
+                const total = data.length;
+                const completed = data.filter(r => r.SURVEY_STATUS?.trim() === 'Completed').length;
+                const notCompleted = total - completed;
+                const withGps = data.filter(r => {
+                    const lat = parseFloat(r.HH_LATITUDE);
+                    const lon = parseFloat(r.HH_LONGITUDE);
+                    return !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
+                }).length;
+
+                // Animate stats
+                animateCount(document.getElementById('total'), total);
+                animateCount(document.getElementById('completed'), completed);
+                animateCount(document.getElementById('notcompleted'), notCompleted);
+                animateCount(document.getElementById('withgps'), withGps);
+
+                // Custom icons
+                const greenIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', iconSize: [25,41], iconAnchor: [12,41] });
+                const redIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', iconSize: [25,41], iconAnchor: [12,41] });
+
+                data.forEach(row => {
+                    const lat = parseFloat(row.HH_LATITUDE);
+                    const lon = parseFloat(row.HH_LONGITUDE);
+                    if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
+                        const isCompleted = row.SURVEY_STATUS?.trim() === 'Completed';
+                        const icon = isCompleted ? greenIcon : redIcon;
+                        const popup = `
+                            <div style="font-family:Poppins; min-width:200px;">
+                                <b>Name:</b> ${row.CITIZEN_NAME || 'N/A'}<br>
+                                <b>Address:</b> ${row.ADDRESS || 'N/A'}<br>
+                                <b>Mobile:</b> ${row.MOBILE_NUMBER || 'N/A'}<br>
+                                <b>Age:</b> ${row.AGE_IN_YEARS || 'N/A'}<br>
+                                <b style="color:${isCompleted ? '#28a745' : '#dc3545'}; font-weight:bold;">Status:</b> ${row.SURVEY_STATUS || 'N/A'}
+                            </div>`;
+                        L.marker([lat, lon], { icon }).bindPopup(popup).addTo(markerCluster);
+                    }
+                });
+
+                if (withGps > 0) map.fitBounds(markerCluster.getBounds(), { padding: [50, 50] });
+
+                $('#dataTable').DataTable({
+                    data: data,
+                    pageLength: 15,
+                    responsive: true,
+                    columns: [
+                        { data: 'HOUSEHOLDID' },
+                        { data: 'CITIZEN_NAME' },
+                        { data: 'ADDRESS' },
+                        { data: 'MOBILE_NUMBER' },
+                        { data: 'AGE_IN_YEARS' },
+                        { data: 'SURVEY_STATUS' },
+                        { data: 'CLUSTER_ID' }
+                    ],
+                    order: [[0, 'asc']]
+                });
+            },
+            error: function(err) {
+                $('.loading-spinner').html('<p class="text-danger fs-4">Failed to load data. Please check your internet or try refreshing.</p>');
+                console.error(err);
+            }
+        });
+    });
+</script>
 </body>
 </html>
