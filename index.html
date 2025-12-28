@@ -314,7 +314,7 @@
             background: #f8fafc;
             border-bottom: 1px solid var(--border);
             display: flex;
-            justify-content: space-between;
+            justify-content: center; /* Center ID */
             align-items: center;
         }
 
@@ -322,16 +322,11 @@
             font-weight: 700;
             color: var(--text-main);
             font-size: 1rem;
+            text-align: center;
+            width: 100%;
         }
-
-        .hh-cluster-badge {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: 4px;
-            background: #e2e8f0;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
+        
+        /* Removed .hh-cluster-badge from header */
 
         .hh-card-body {
             padding: 1rem;
@@ -339,6 +334,16 @@
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+        }
+
+        /* NEW: Cluster Row to show below HH_ID */
+        .hh-cluster-row {
+            display: flex;
+            justify-content: center; /* Centered Badge */
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px dashed var(--border);
         }
 
         .hh-detail-row {
@@ -557,6 +562,13 @@
             text-align: left;
         }
 
+        thead {
+            background: #f8fafc;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
         th {
             padding: 0.75rem 1.25rem;
             font-weight: 600;
@@ -580,6 +592,7 @@
             background-color: #f8fafc;
         }
 
+        /* Pagination Footer */
         .pagination-footer {
             padding: 0.75rem 1.5rem;
             border-top: 1px solid var(--border);
@@ -808,6 +821,10 @@
                     <span class="c-value" id="modalDob">-</span>
                 </div>
                 <div class="citizen-detail-row">
+                    <span class="c-label">Age (Years)</span>
+                    <span class="c-value" id="modalAge">-</span>
+                </div>
+                <div class="citizen-detail-row">
                     <span class="c-label">Caste</span>
                     <span class="c-value" id="modalCaste">-</span>
                 </div>
@@ -1017,6 +1034,7 @@
         const modalAadhar = document.getElementById('modalAadhar');
         const modalGender = document.getElementById('modalGender');
         const modalDob = document.getElementById('modalDob');
+        const modalAge = document.getElementById('modalAge');
         const modalCaste = document.getElementById('modalCaste');
         const modalSubcaste = document.getElementById('modalSubcaste');
 
@@ -1131,8 +1149,7 @@
 
         // --- Citizen Popup Logic ---
         function openCitizenPopup(name, hhId) {
-            // Find the exact citizen row in currentFilteredData
-            // We search for matching HH_ID and CITIZEN_NAME
+            // Find exact citizen row in currentFilteredData
             const citizenRow = currentFilteredData.find(r => 
                 r['HH_ID'] === hhId && r['CITIZEN_NAME'] === name
             );
@@ -1143,6 +1160,7 @@
                 modalAadhar.textContent = citizenRow['AADHAR_NUMBER'] || 'Not Available';
                 modalGender.textContent = citizenRow['GENDER'] || 'Not Available';
                 modalDob.textContent = citizenRow['DOB_DT'] || 'Not Available';
+                modalAge.textContent = citizenRow['AGE_IN_YEARS'] || 'Not Available';
                 modalCaste.textContent = citizenRow['CASTE'] || 'Not Available';
                 modalSubcaste.textContent = citizenRow['SUBCASTE'] || 'Not Available';
 
@@ -1207,17 +1225,19 @@
                 const card = document.createElement('div');
                 card.className = 'hh-card';
                 
-                // Header
+                // Header: Only HH ID (Full Width)
                 const header = document.createElement('div');
                 header.className = 'hh-card-header';
-                header.innerHTML = `
-                    <span class="hh-id">${hh.id}</span>
-                    <span class="hh-cluster-badge">${hh.clusterId}</span>
-                `;
+                header.innerHTML = `<span class="hh-id">${hh.id}</span>`;
 
                 // Body
                 const body = document.createElement('div');
                 body.className = 'hh-card-body';
+                
+                // NEW: Cluster Row (Below HH ID)
+                const clusterRow = document.createElement('div');
+                clusterRow.className = 'hh-cluster-row';
+                clusterRow.innerHTML = `<span class="hh-cluster-badge">${hh.clusterId}</span>`;
                 
                 // Address
                 const addressRow = document.createElement('div');
@@ -1276,15 +1296,17 @@
                         </a>
                     `;
                 } else {
+                    // Hide footer if no coords, or show message
                     footer.style.display = 'none';
                 }
 
-                // Assemble Card
+                // Assemble Card: Header -> Body (Cluster -> Address -> Mobile -> Members) -> Footer
+                body.appendChild(clusterRow); // Add cluster row first
                 body.appendChild(addressRow);
                 body.appendChild(mobileRow);
                 body.appendChild(membersTitle);
                 body.appendChild(membersList);
-                body.appendChild(footer); // Append footer
+                body.appendChild(footer);
 
                 card.appendChild(header);
                 card.appendChild(body);
@@ -1335,7 +1357,7 @@
                 if (sc && sc.trim() !== '') subcasteCounts[sc] = (subcasteCounts[sc] || 0) + 1;
             });
 
-            // 3. Age
+            // 3. Age (Binning)
             const ageGroups = { '0-18': 0, '19-30': 0, '31-50': 0, '51+': 0 };
             data.forEach(row => {
                 const age = parseInt(row['AGE_IN_YEARS']);
@@ -1473,8 +1495,8 @@
                 });
             }
 
-            currentPage = 1;
-            currentHHPage = 1;
+            currentPage = 1; // Reset Table Page
+            currentHHPage = 1; // Reset Cards Page
             processData(currentFilteredData);
         }
 
