@@ -187,10 +187,10 @@
             font-size: 1rem;
         }
 
-        .bg-blue { background: #dbeafe; color: #1e40af; }
+        .bg-indigo { background: #e0e7ff; color: #4338ca; }
         .bg-green { background: #d1fae5; color: #065f46; }
-        .bg-purple { background: #f3e8ff; color: #6b21a8; }
-        .bg-orange { background: #ffedd5; color: #9a3412; }
+        .bg-blue { background: #dbeafe; color: #1e40af; } /* Male */
+        .bg-pink { background: #fce7f3; color: #9d174d; } /* Female */
 
         /* --- Content Area (Map & Table) --- */
         .content-area {
@@ -482,7 +482,7 @@
             <div class="metric-card">
                 <div class="metric-header">
                     <span>Total Citizens</span>
-                    <div class="metric-icon bg-blue"><i class="fa-solid fa-users"></i></div>
+                    <div class="metric-icon bg-indigo"><i class="fa-solid fa-users"></i></div>
                 </div>
                 <div class="metric-value" id="stat-total">0</div>
             </div>
@@ -495,20 +495,22 @@
                 <div class="metric-value" id="stat-households">0</div>
             </div>
 
+            <!-- Added Male Card -->
             <div class="metric-card">
                 <div class="metric-header">
-                    <span>eKYC Completed</span>
-                    <div class="metric-icon bg-purple"><i class="fa-solid fa-check-circle"></i></div>
+                    <span>Total Male</span>
+                    <div class="metric-icon bg-blue"><i class="fa-solid fa-mars"></i></div>
                 </div>
-                <div class="metric-value" id="stat-ekyc">0%</div>
+                <div class="metric-value" id="stat-male">0</div>
             </div>
-            
+
+            <!-- Added Female Card -->
             <div class="metric-card">
                 <div class="metric-header">
-                    <span>Female Ratio</span>
-                    <div class="metric-icon bg-orange"><i class="fa-solid fa-venus-mars"></i></div>
+                    <span>Total Female</span>
+                    <div class="metric-icon bg-pink"><i class="fa-solid fa-venus"></i></div>
                 </div>
-                <div class="metric-value" id="stat-ratio">0%</div>
+                <div class="metric-value" id="stat-female">0</div>
             </div>
         </aside>
 
@@ -574,8 +576,8 @@
         // Stats DOM
         const statTotal = document.getElementById('stat-total');
         const statHouseholds = document.getElementById('stat-households');
-        const statEkyc = document.getElementById('stat-ekyc');
-        const statRatio = document.getElementById('stat-ratio');
+        const statMale = document.getElementById('stat-male');
+        const statFemale = document.getElementById('stat-female');
 
         document.addEventListener('DOMContentLoaded', init);
 
@@ -705,29 +707,24 @@
 
         function updateDashboardStats(data) {
             const total = data.length;
-            let ekycCount = 0;
             let femaleCount = 0;
             let maleCount = 0;
             const uniqueHH = new Set();
 
             data.forEach(row => {
-                const ekyc = (row['EKYCSTATUS'] || '').toString().toUpperCase().trim();
                 const gender = (row['GENDER'] || '').toString().toUpperCase().trim();
                 const hhId = row['HH_ID'];
 
                 if (hhId) uniqueHH.add(hhId);
-                if (ekyc === 'YES' || ekyc === 'Y' || ekyc === 'COMPLETED') ekycCount++;
+
                 if (gender === 'MALE' || gender === 'M') maleCount++;
                 else if (gender === 'FEMALE' || gender === 'F') femaleCount++;
             });
 
             animateValue(statTotal, parseInt(statTotal.innerText), total, 1000);
             animateValue(statHouseholds, parseInt(statHouseholds.innerText), uniqueHH.size, 1000);
-            statEkyc.innerText = total > 0 ? Math.round((ekycCount / total) * 100) + '%' : '0%';
-            
-            const totalGender = maleCount + femaleCount;
-            const ratio = totalGender > 0 ? Math.round((femaleCount / totalGender) * 100) : 0;
-            animateValue(statRatio, parseInt(statRatio.innerText), ratio, 1000);
+            animateValue(statMale, parseInt(statMale.innerText), maleCount, 1000);
+            animateValue(statFemale, parseInt(statFemale.innerText), femaleCount, 1000);
         }
 
         function renderTable() {
@@ -801,7 +798,7 @@
             return `hsl(${h}, 75%, 45%)`; 
         }
 
-        // --- Map Rendering (Detailed Popup + Redirect Button) ---
+        // --- Map Rendering (Mobile Dialer Redirect + Popup) ---
         function renderMapMarkers(data) {
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
@@ -867,6 +864,13 @@
 
                 // 2. Detailed Popup Content
                 const googleMapsUrl = `https://www.google.com/maps?q=${house.lat},${house.lng}`;
+                
+                // Create Clickable Mobile Link
+                const mobileLink = (house.mobile && house.mobile !== 'Not Available')
+                    ? `<a href="tel:${house.mobile}" style="color:#2563eb; text-decoration:none; font-weight:600; display:flex; align-items:center; gap:5px;">
+                         <i class="fa-solid fa-phone"></i> ${house.mobile}
+                       </a>`
+                    : `<span style="color:#64748b;">${house.mobile}</span>`;
 
                 const popupContent = `
                     <div style="font-family: 'Inter', sans-serif; min-width: 200px;">
@@ -877,7 +881,7 @@
                         </div>
                         <div style="font-size:0.85rem; line-height: 1.5;">
                             <div><strong>Cluster ID:</strong> <span style="color:${color}; font-weight:bold;">${house.clusterId}</span></div>
-                            <div><strong>Mobile:</strong> ${house.mobile}</div>
+                            <div><strong>Mobile:</strong> ${mobileLink}</div>
                             <div><strong>Members:</strong> ${house.members.length}</div>
                             <div style="margin-top:5px;"><strong>Address:</strong><br>${house.address}</div>
                             
