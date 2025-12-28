@@ -123,7 +123,7 @@
             background-color: #fff;
             color: var(--text-main);
             cursor: pointer;
-            appearance: none; /* Remove default arrow */
+            appearance: none;
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
             background-repeat: no-repeat;
             background-position: right 0.7rem center;
@@ -458,7 +458,8 @@
         <div class="controls-area">
             <div class="search-container">
                 <i class="fa-solid fa-search"></i>
-                <input type="text" id="globalSearch" placeholder="Search name, ID, address...">
+                <!-- Updated placeholder to include Aadhar -->
+                <input type="text" id="globalSearch" placeholder="Search Name, Aadhar, or ID...">
             </div>
             
             <div class="filter-wrapper">
@@ -650,22 +651,47 @@
             renderMapMarkers(data);
         }
 
-        // --- Core Filtering Logic ---
+        // --- Core Filtering Logic (Modified for Household Expansion) ---
         function applyFilters() {
-            const query = searchInput.value.toLowerCase();
+            const query = searchInput.value.toLowerCase().trim();
             const selectedCluster = clusterFilter.value;
 
-            currentFilteredData = allData.filter(row => {
-                // 1. Match Search Query (Check all values)
-                const matchesSearch = Object.values(row).some(val => 
-                    String(val).toLowerCase().includes(query)
-                );
+            let targetHHIds = new Set();
 
-                // 2. Match Cluster Dropdown
-                const matchesCluster = selectedCluster === 'all' || (row['Cluster ID'] == selectedCluster);
+            // Case 1: No Search Text, Just Cluster Filter
+            if (query === '') {
+                currentFilteredData = allData.filter(row => {
+                    return selectedCluster === 'all' || (row['Cluster ID'] == selectedCluster);
+                });
+            } 
+            // Case 2: Search Text Exists -> Find Households
+            else {
+                // Step A: Scan all data to find matching HH_IDs
+                allData.forEach(row => {
+                    // 1. Check Cluster Match
+                    const matchesCluster = selectedCluster === 'all' || (row['Cluster ID'] == selectedCluster);
+                    if (!matchesCluster) return;
 
-                return matchesSearch && matchesCluster;
-            });
+                    // 2. Check Search Text (includes Aadhar, Name, etc.)
+                    // Object.values(row) checks all columns including AADHAR_NUMBER
+                    const matchesSearch = Object.values(row).some(val => 
+                        String(val).toLowerCase().includes(query)
+                    );
+
+                    if (matchesSearch) {
+                        // Found a person! Add their household ID to our target list.
+                        if (row['HH_ID']) {
+                            targetHHIds.add(row['HH_ID']);
+                        }
+                    }
+                });
+
+                // Step B: Filter original data to return ALL rows from target households
+                currentFilteredData = allData.filter(row => {
+                    const matchesCluster = selectedCluster === 'all' || (row['Cluster ID'] == selectedCluster);
+                    return matchesCluster && targetHHIds.has(row['HH_ID']);
+                });
+            }
 
             // Update views
             currentPage = 1; // Reset to page 1
