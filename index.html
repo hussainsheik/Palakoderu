@@ -245,6 +245,13 @@
             justify-content: center;
             align-items: center;
             z-index: 2;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .marker-container:hover .marker-pin {
+            transform: rotate(-45deg) scale(1.1);
+            z-index: 10;
         }
 
         .marker-icon {
@@ -458,7 +465,6 @@
         <div class="controls-area">
             <div class="search-container">
                 <i class="fa-solid fa-search"></i>
-                <!-- Updated placeholder to include Aadhar -->
                 <input type="text" id="globalSearch" placeholder="Search Name, Aadhar, or ID...">
             </div>
             
@@ -651,7 +657,7 @@
             renderMapMarkers(data);
         }
 
-        // --- Core Filtering Logic (Modified for Household Expansion) ---
+        // --- Core Filtering Logic ---
         function applyFilters() {
             const query = searchInput.value.toLowerCase().trim();
             const selectedCluster = clusterFilter.value;
@@ -673,7 +679,6 @@
                     if (!matchesCluster) return;
 
                     // 2. Check Search Text (includes Aadhar, Name, etc.)
-                    // Object.values(row) checks all columns including AADHAR_NUMBER
                     const matchesSearch = Object.values(row).some(val => 
                         String(val).toLowerCase().includes(query)
                     );
@@ -796,7 +801,7 @@
             return `hsl(${h}, 75%, 45%)`; 
         }
 
-        // --- Map Rendering ---
+        // --- Map Rendering (Detailed Popup + Redirect Button) ---
         function renderMapMarkers(data) {
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
@@ -849,10 +854,24 @@
 
                 const marker = L.marker([house.lat, house.lng], { icon: customIcon }).addTo(map);
 
+                // 1. Hover Tooltip
+                marker.bindTooltip(`
+                    <div style="font-weight:600; color:#2563eb">${house.id}</div>
+                    <div style="font-size:0.8rem; color:#666;">${house.address}</div>
+                `, {
+                    permanent: false,
+                    direction: 'top',
+                    offset: [0, -20],
+                    className: 'marker-tooltip'
+                });
+
+                // 2. Detailed Popup Content
+                const googleMapsUrl = `https://www.google.com/maps?q=${house.lat},${house.lng}`;
+
                 const popupContent = `
-                    <div style="font-family: 'Inter', sans-serif; min-width: 180px;">
+                    <div style="font-family: 'Inter', sans-serif; min-width: 200px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                            <h4 style="margin:0; color:var(--primary); font-size: 1rem;">
+                            <h4 style="margin:0; color:#2563eb; font-size: 1rem;">
                                 ${house.id}
                             </h4>
                         </div>
@@ -866,9 +885,19 @@
                             <ul style="margin:5px 0; padding-left:15px; font-size:0.8rem;">
                                 ${house.members.map(m => `<li>${m.name} (${m.gender})</li>`).join('')}
                             </ul>
+                            
+                            <!-- Google Maps Redirect Button -->
+                            <div style="margin-top:10px; text-align:center;">
+                                <a href="${googleMapsUrl}" target="_blank" 
+                                   style="display:inline-block; background:#2563eb; color:white; padding:6px 12px; 
+                                          border-radius:4px; text-decoration:none; font-size:0.85rem; font-weight:600;">
+                                    <i class="fa-solid fa-location-arrow"></i> Open in Google Maps
+                                </a>
+                            </div>
                         </div>
                     </div>
                 `;
+                
                 marker.bindPopup(popupContent);
                 markers.push(marker);
                 bounds.extend([house.lat, house.lng]);
