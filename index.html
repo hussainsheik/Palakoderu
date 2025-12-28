@@ -67,9 +67,15 @@
             color: var(--primary);
         }
 
+        .controls-area {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
         .search-container {
             position: relative;
-            width: 300px;
+            width: 250px;
         }
 
         .search-container input {
@@ -81,7 +87,7 @@
             transition: all 0.2s;
         }
 
-        .search-container input:focus {
+        .search-container input:focus, .filter-select:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -93,6 +99,36 @@
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-muted);
+        }
+
+        /* Cluster Filter Dropdown */
+        .filter-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .filter-select {
+            padding: 0.6rem 2rem 0.6rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background-color: #fff;
+            color: var(--text-main);
+            cursor: pointer;
+            appearance: none; /* Remove default arrow */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.7rem center;
+            background-size: 1em;
+            min-width: 200px;
         }
 
         /* --- Main Layout --- */
@@ -390,6 +426,20 @@
             .content-area { height: auto; overflow: visible; }
             .map-wrapper { height: 300px; flex: none; } 
             .table-wrapper { height: 500px; flex: none; }
+            
+            header {
+                flex-direction: column;
+                height: auto;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            .controls-area {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .filter-select {
+                flex: 1;
+            }
         }
     </style>
 </head>
@@ -405,9 +455,18 @@
             <i class="fa-solid fa-map-location-dot"></i>
             <span>CitizenView Dashboard</span>
         </div>
-        <div class="search-container">
-            <i class="fa-solid fa-search"></i>
-            <input type="text" id="globalSearch" placeholder="Search name, ID, or address...">
+        <div class="controls-area">
+            <div class="search-container">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" id="globalSearch" placeholder="Search name, ID, address...">
+            </div>
+            
+            <div class="filter-wrapper">
+                <label class="filter-label">Filter Cluster:</label>
+                <select id="clusterFilter" class="filter-select">
+                    <option value="all">All Clusters</option>
+                </select>
+            </div>
         </div>
     </header>
 
@@ -483,7 +542,7 @@
         
         // State
         let allData = [];
-        let currentFilteredData = []; // Data currently being displayed/searched
+        let currentFilteredData = []; 
         let map;
         let markers = []; 
         let tableHeaders = [];
@@ -497,6 +556,7 @@
         const tableHeadersRow = document.getElementById('tableHeadersRow');
         const loadingOverlay = document.getElementById('loading-overlay');
         const searchInput = document.getElementById('globalSearch');
+        const clusterFilter = document.getElementById('clusterFilter');
         
         // Pagination DOM
         const prevBtn = document.getElementById('prevBtn');
@@ -520,14 +580,9 @@
             prevBtn.addEventListener('click', () => changePage(-1));
             nextBtn.addEventListener('click', () => changePage(1));
             
-            // Search Listener
-            let debounceTimer;
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    handleSearch(e.target.value);
-                }, 300);
-            });
+            // Filter Listeners (Search & Cluster)
+            searchInput.addEventListener('input', applyFilters);
+            clusterFilter.addEventListener('change', applyFilters);
         }
 
         function initMap() {
@@ -545,14 +600,17 @@
                 skipEmptyLines: true,
                 complete: function(results) {
                     allData = results.data;
-                    currentFilteredData = [...allData]; // Initialize filtered data with all data
                     
+                    // 1. Extract and Populate Cluster Filter
+                    populateClusterFilter(allData);
+
                     if(allData.length > 0) {
                         tableHeaders = Object.keys(allData[0]);
                         buildTableHeaders(tableHeaders);
                     }
 
-                    processData(allData);
+                    // Initial processing
+                    applyFilters();
                     
                     loadingOverlay.style.opacity = '0';
                     setTimeout(() => loadingOverlay.style.display = 'none', 300);
@@ -561,6 +619,19 @@
                     console.error("Error fetching data:", err);
                     loadingOverlay.innerHTML = `<div style="color:red">Error loading data.</div>`;
                 }
+            });
+        }
+
+        function populateClusterFilter(data) {
+            // Get unique Cluster IDs
+            const uniqueClusters = new Set(data.map(r => r['Cluster ID']));
+            const sortedClusters = Array.from(uniqueClusters).filter(c => c).sort(); // Remove empty/null and sort
+
+            sortedClusters.forEach(cluster => {
+                const option = document.createElement('option');
+                option.value = cluster;
+                option.textContent = cluster;
+                clusterFilter.appendChild(option);
             });
         }
 
@@ -575,8 +646,30 @@
 
         function processData(data) {
             updateDashboardStats(data);
-            renderTable(); // Calls render with currentFilteredData internally
+            renderTable(); 
             renderMapMarkers(data);
+        }
+
+        // --- Core Filtering Logic ---
+        function applyFilters() {
+            const query = searchInput.value.toLowerCase();
+            const selectedCluster = clusterFilter.value;
+
+            currentFilteredData = allData.filter(row => {
+                // 1. Match Search Query (Check all values)
+                const matchesSearch = Object.values(row).some(val => 
+                    String(val).toLowerCase().includes(query)
+                );
+
+                // 2. Match Cluster Dropdown
+                const matchesCluster = selectedCluster === 'all' || (row['Cluster ID'] == selectedCluster);
+
+                return matchesSearch && matchesCluster;
+            });
+
+            // Update views
+            currentPage = 1; // Reset to page 1
+            processData(currentFilteredData);
         }
 
         function updateDashboardStats(data) {
@@ -612,7 +705,6 @@
             const totalItems = currentFilteredData.length;
             const totalPages = Math.ceil(totalItems / rowsPerPage);
             
-            // Ensure currentPage is within bounds
             if (currentPage < 1) currentPage = 1;
             if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
 
@@ -666,20 +758,6 @@
             renderTable();
         }
 
-        function handleSearch(query) {
-            const lowerQuery = query.toLowerCase();
-            currentFilteredData = allData.filter(row => {
-                return Object.values(row).some(val => 
-                    String(val).toLowerCase().includes(lowerQuery)
-                );
-            });
-            
-            currentPage = 1; // Reset to page 1 on new search
-            renderTable();
-            renderMapMarkers(currentFilteredData);
-            updateDashboardStats(currentFilteredData); 
-        }
-
         // --- Helper: Generate consistent color from string (Cluster ID) ---
         function stringToColor(str) {
             if(!str) return '#999999'; 
@@ -692,7 +770,7 @@
             return `hsl(${h}, 75%, 45%)`; 
         }
 
-        // --- Map Rendering (Cluster Colors, No Glow, Grouped by HH, Includes Mobile) ---
+        // --- Map Rendering ---
         function renderMapMarkers(data) {
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
@@ -711,7 +789,7 @@
                         lng: lng,
                         id: hhId,
                         address: row['Address'] || 'Unknown Address',
-                        mobile: row['MOBILE_NUMBER'] || 'Not Available', // Capture Mobile
+                        mobile: row['MOBILE_NUMBER'] || 'Not Available',
                         clusterId: row['Cluster ID'] || 'Unknown',
                         members: []
                     };
