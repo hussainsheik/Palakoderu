@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Added Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Icons and Fonts -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -203,7 +205,7 @@
 
         /* Map Container */
         .map-wrapper {
-            height: 35%; 
+            height: 42%; 
             flex: none; 
             background: var(--bg-card);
             border-radius: 12px;
@@ -220,65 +222,63 @@
             z-index: 1;
         }
 
-        /* --- Custom Marker Styles --- */
-        .marker-container {
-            position: relative;
+        /* --- Tabs Navigation --- */
+        .tabs-nav {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
+            background: #e2e8f0;
+            padding: 0.25rem;
+            border-radius: 8px;
+            gap: 0.5rem;
+            width: fit-content;
         }
 
-        .marker-pin {
-            width: 28px;
-            height: 28px;
-            border-radius: 50% 50% 50% 0;
-            position: absolute;
-            transform: rotate(-45deg);
-            left: 50%;
-            top: 50%;
-            margin: -14px 0 0 -14px;
-            box-shadow: 0 2px 3px rgba(0,0,0,0.2);
-            border: 2px solid #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 2;
-            transition: transform 0.2s;
+        .tab-btn {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            background: transparent;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-radius: 6px;
             cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .marker-container:hover .marker-pin {
-            transform: rotate(-45deg) scale(1.1);
-            z-index: 10;
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.5);
         }
 
-        .marker-icon {
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            margin: 3px 0 0 -3px; 
-            color: white;
-            font-size: 14px;
-            transform: rotate(45deg); 
-            z-index: 3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .tab-btn.active {
+            background: var(--bg-card);
+            color: var(--primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            font-weight: 600;
         }
 
-        /* Table Container */
-        .table-wrapper {
-            flex: 1; 
+        /* --- Tab Content Containers --- */
+        .tab-content-wrapper {
+            flex: 1;
             background: var(--bg-card);
             border-radius: 12px;
             border: 1px solid var(--border);
             box-shadow: var(--shadow);
-            display: flex;
+            display: none; /* Hidden by default */
             flex-direction: column;
             overflow: hidden;
             min-height: 0;
+        }
+
+        .tab-content-wrapper.active {
+            display: flex;
+        }
+
+        /* Table Container */
+        .table-wrapper {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .table-header {
@@ -382,16 +382,38 @@
             background: #f1f5f9;
         }
 
-        .badge {
-            padding: 0.25rem 0.6rem;
-            border-radius: 999px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            display: inline-block;
+        /* --- Charts Container --- */
+        .charts-wrapper {
+            padding: 1.5rem;
+            height: 100%;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Grid Layout */
+            gap: 1.5rem;
+            align-content: start;
         }
-        .badge-success { background: #dcfce7; color: #166534; }
-        .badge-pending { background: #fef9c3; color: #854d0e; }
-        .badge-error { background: #fee2e2; color: #991b1b; }
+
+        .chart-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            height: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .chart-title {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
 
         /* Loading Overlay */
         #loading-overlay {
@@ -426,13 +448,72 @@
             color: var(--text-muted);
         }
 
+        /* Custom Marker Styles */
+        .marker-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+        }
+
+        .marker-pin {
+            width: 28px;
+            height: 28px;
+            border-radius: 50% 50% 50% 0;
+            position: absolute;
+            transform: rotate(-45deg);
+            left: 50%;
+            top: 50%;
+            margin: -14px 0 0 -14px;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.2);
+            border: 2px solid #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .marker-container:hover .marker-pin {
+            transform: rotate(-45deg) scale(1.1);
+            z-index: 10;
+        }
+
+        .marker-icon {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            margin: 3px 0 0 -3px; 
+            color: white;
+            font-size: 14px;
+            transform: rotate(45deg); 
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-pending { background: #fef9c3; color: #854d0e; }
+        .badge-error { background: #fee2e2; color: #991b1b; }
+
         @media (max-width: 1024px) {
             main { flex-direction: column; overflow-y: auto; }
             .sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
             .metric-card { min-width: 200px; flex: 1; }
             .content-area { height: auto; overflow: visible; }
-            .map-wrapper { height: 300px; flex: none; } 
-            .table-wrapper { height: 500px; flex: none; }
+            .map-wrapper { height: 350px; flex: none; } 
+            .tab-content-wrapper { height: 600px; flex: none; }
             
             header {
                 flex-direction: column;
@@ -495,7 +576,6 @@
                 <div class="metric-value" id="stat-households">0</div>
             </div>
 
-            <!-- Added Male Card -->
             <div class="metric-card">
                 <div class="metric-header">
                     <span>Total Male</span>
@@ -504,7 +584,6 @@
                 <div class="metric-value" id="stat-male">0</div>
             </div>
 
-            <!-- Added Female Card -->
             <div class="metric-card">
                 <div class="metric-header">
                     <span>Total Female</span>
@@ -520,26 +599,56 @@
                 <div id="map"></div>
             </div>
 
-            <!-- Table Container with Pagination -->
-            <div class="table-wrapper">
-                <div class="table-header">
-                    <div class="table-title">Complete Registry Data</div>
+            <!-- Tabs Navigation -->
+            <div class="tabs-nav">
+                <button class="tab-btn active" onclick="switchTab('table')">Registry Data</button>
+                <button class="tab-btn" onclick="switchTab('charts')">Analytics & Charts</button>
+            </div>
+
+            <!-- Tab 1: Data Table -->
+            <div id="tab-table" class="tab-content-wrapper active">
+                <div class="table-wrapper">
+                    <div class="table-header">
+                        <div class="table-title">Complete Registry Data</div>
+                    </div>
+                    <div class="table-scroll">
+                        <table id="dataTable">
+                            <thead>
+                                <tr id="tableHeadersRow"></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-footer">
+                        <div class="pagination-info" id="paginationInfo">Showing 0-0 of 0</div>
+                        <div class="pagination-controls">
+                            <button id="prevBtn" class="btn-page"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                            <span id="pageIndicator" style="display:flex; align-items:center; font-size:0.85rem; padding:0 0.5rem; color:var(--text-muted);">Page 1</span>
+                            <button id="nextBtn" class="btn-page">Next <i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
                 </div>
-                <div class="table-scroll">
-                    <table id="dataTable">
-                        <thead>
-                            <tr id="tableHeadersRow"></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <!-- Pagination Controls -->
-                <div class="pagination-footer">
-                    <div class="pagination-info" id="paginationInfo">Showing 0-0 of 0</div>
-                    <div class="pagination-controls">
-                        <button id="prevBtn" class="btn-page"><i class="fa-solid fa-chevron-left"></i> Prev</button>
-                        <span id="pageIndicator" style="display:flex; align-items:center; font-size:0.85rem; padding:0 0.5rem; color:var(--text-muted);">Page 1</span>
-                        <button id="nextBtn" class="btn-page">Next <i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+
+            <!-- Tab 2: Charts -->
+            <div id="tab-charts" class="tab-content-wrapper">
+                <div class="charts-wrapper">
+                    <div class="chart-card">
+                        <div class="chart-title">Caste Distribution</div>
+                        <canvas id="casteChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Subcaste Distribution</div>
+                        <canvas id="subcasteChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Age Groups</div>
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                    <!-- NEW CHART: HH per Cluster -->
+                    <div class="chart-card">
+                        <div class="chart-title">Households per Cluster</div>
+                        <canvas id="clusterChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -556,6 +665,12 @@
         let markers = []; 
         let tableHeaders = [];
         
+        // Chart Instances
+        let casteChartInstance = null;
+        let subcasteChartInstance = null;
+        let ageChartInstance = null;
+        let clusterChartInstance = null; // New
+
         // Pagination State
         let currentPage = 1;
         const rowsPerPage = 50;
@@ -634,7 +749,7 @@
         function populateClusterFilter(data) {
             // Get unique Cluster IDs
             const uniqueClusters = new Set(data.map(r => r['Cluster ID']));
-            const sortedClusters = Array.from(uniqueClusters).filter(c => c).sort(); // Remove empty/null and sort
+            const sortedClusters = Array.from(uniqueClusters).filter(c => c).sort();
 
             sortedClusters.forEach(cluster => {
                 const option = document.createElement('option');
@@ -657,6 +772,168 @@
             updateDashboardStats(data);
             renderTable(); 
             renderMapMarkers(data);
+            renderCharts(data); // Update charts
+        }
+
+        // --- Tab Switching Logic ---
+        function switchTab(tabName) {
+            // Update Buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if(tabName === 'table') document.querySelector('.tab-btn:first-child').classList.add('active');
+            if(tabName === 'charts') document.querySelector('.tab-btn:last-child').classList.add('active');
+
+            // Toggle Content
+            document.getElementById('tab-table').classList.remove('active');
+            document.getElementById('tab-charts').classList.remove('active');
+            
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        // --- Charts Rendering Logic ---
+        function renderCharts(data) {
+            // 1. Aggregate Caste Data
+            const casteCounts = {};
+            data.forEach(row => {
+                const c = row['CASTE'];
+                if (c && c.trim() !== '') {
+                    casteCounts[c] = (casteCounts[c] || 0) + 1;
+                }
+            });
+
+            // 2. Aggregate Subcaste Data
+            const subcasteCounts = {};
+            data.forEach(row => {
+                const sc = row['SUBCASTE'];
+                if (sc && sc.trim() !== '') {
+                    subcasteCounts[sc] = (subcasteCounts[sc] || 0) + 1;
+                }
+            });
+
+            // 3. Aggregate Age Data (Binning)
+            const ageGroups = { '0-18': 0, '19-30': 0, '31-50': 0, '51+': 0 };
+            data.forEach(row => {
+                const age = parseInt(row['AGE_IN_YEARS']);
+                if (!isNaN(age)) {
+                    if (age <= 18) ageGroups['0-18']++;
+                    else if (age <= 30) ageGroups['19-30']++;
+                    else if (age <= 50) ageGroups['31-50']++;
+                    else ageGroups['51+']++;
+                }
+            });
+
+            // 4. Aggregate Cluster HH Counts (New)
+            const clusterHHCounts = {};
+            data.forEach(row => {
+                const cluster = row['Cluster ID'];
+                const hhId = row['HH_ID'];
+                if (cluster && hhId) {
+                    if (!clusterHHCounts[cluster]) clusterHHCounts[cluster] = new Set();
+                    clusterHHCounts[cluster].add(hhId);
+                }
+            });
+            // Convert Sets to Counts for the chart
+            const clusterLabels = Object.keys(clusterHHCounts).sort(); // Sort alphabetically
+            const clusterDataPoints = clusterLabels.map(c => clusterHHCounts[c].size);
+
+            // Destroy existing charts to prevent overlays
+            if (casteChartInstance) casteChartInstance.destroy();
+            if (subcasteChartInstance) subcasteChartInstance.destroy();
+            if (ageChartInstance) ageChartInstance.destroy();
+            if (clusterChartInstance) clusterChartInstance.destroy();
+
+            // 1. Caste Pie Chart
+            const casteCtx = document.getElementById('casteChart').getContext('2d');
+            casteChartInstance = new Chart(casteCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(casteCounts),
+                    datasets: [{
+                        data: Object.values(casteCounts),
+                        backgroundColor: [
+                            '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // 2. Subcaste Pie Chart
+            const subcasteCtx = document.getElementById('subcasteChart').getContext('2d');
+            subcasteChartInstance = new Chart(subcasteCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(subcasteCounts),
+                    datasets: [{
+                        data: Object.values(subcasteCounts),
+                        backgroundColor: [
+                            '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // 3. Age Bar Chart
+            const ageCtx = document.getElementById('ageChart').getContext('2d');
+            ageChartInstance = new Chart(ageCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(ageGroups),
+                    datasets: [{
+                        label: 'Count',
+                        data: Object.values(ageGroups),
+                        backgroundColor: ['#f59e0b', '#fbbf24', '#fcd34d', '#fef3c7'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // 4. New Cluster HH Bar Chart (Horizontal for better label reading)
+            const clusterCtx = document.getElementById('clusterChart').getContext('2d');
+            clusterChartInstance = new Chart(clusterCtx, {
+                type: 'bar',
+                indexAxis: 'y', // Make it horizontal
+                data: {
+                    labels: clusterLabels,
+                    datasets: [{
+                        label: 'Households',
+                        data: clusterDataPoints,
+                        backgroundColor: '#6366f1',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false } // Hide legend as labels are clear
+                    }
+                }
+            });
         }
 
         // --- Core Filtering Logic ---
